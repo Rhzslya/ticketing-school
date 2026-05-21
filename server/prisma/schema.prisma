@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Status {
+  SUBMITTED
+  ONGOING
+  DONE
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String   @unique
+  password  String?  @db.VarChar(100)
+  fullName      String   @db.VarChar(100)
+  role      UserRole @default(TEACHER)
+  tickets   Ticket[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Ticket {
+  id          String   @id @db.VarChar(50)
+  title       String   @db.VarChar(100)
+  description String   @db.Text
+  priority    Priority @default(LOW)
+  status      Status   @default(SUBMITTED)
+  
+  submitterId Int
+  submitter   User     @relation(fields: [submitterId], references: [id])
+
+  attachment_url String[] @default([])
+
+  deleted_at DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
