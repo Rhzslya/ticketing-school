@@ -1,122 +1,96 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import MainLayout from "./layout/MainLayout";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import { AdminRoute, GuestRoute, ProtectedRoute } from "./layout/AuthGuard";
+import CreateTicketPage from "./pages/CreateTicketPage";
+import { MyTicketPage } from "./pages/MyTicketPage";
+import DetailedTicketPage from "./pages/DetailedTicketPage";
+import { Toaster } from "sonner";
+import UpdateTicketPage from "./pages/UpdateTicketPage";
+import SidebarLayout from "./layout/SidebarLayout";
+import { DashboardPage } from "./pages/DashboardPage";
+import DashboardTicketPage from "./pages/DashboardTicketPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
+import TrackTicketPage from "./pages/TrackTicketPage";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<HomePage />} />
 
-      <div className="ticks"></div>
+          <Route
+            path="*"
+            element={
+              <NotFoundPage
+                variant="minimal"
+                entityName="Page"
+                isDashboard={false}
+              />
+            }
+          />
+        </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <Route element={<ProtectedRoute />}>
+          <Route path="/tickets/create" element={<CreateTicketPage />} />
+          <Route path="/tickets/:id/edit" element={<UpdateTicketPage />} />
+          <Route path="/tickets/my-tickets" element={<MyTicketPage />} />
+          <Route path="/tickets/:id" element={<DetailedTicketPage />} />
+          <Route path="/tickets/track/:id" element={<TrackTicketPage />} />
+
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+
+        <Route element={<AdminRoute />}>
+          <Route
+            element={
+              <SidebarLayout>
+                <Outlet />
+              </SidebarLayout>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/dashboard/tickets"
+              element={<DashboardTicketPage />}
+            />
+          </Route>
+
+          <Route
+            path="*"
+            element={
+              <NotFoundPage
+                variant="minimal"
+                entityName="Page"
+                isDashboard={true}
+              />
+            }
+          />
+        </Route>
+
+        <Route
+          path="*"
+          element={
+            <NotFoundPage
+              variant="minimal"
+              entityName="Page"
+              isDashboard={false}
+            />
+          }
+        />
+      </Routes>
+      <Toaster position="top-center" richColors />
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
