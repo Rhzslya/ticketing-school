@@ -15,7 +15,7 @@ web.use("*", logger());
 const allowedOrigins = ["http://localhost:5173", "http://localhost:4173"];
 
 web.use(
-  "*/",
+  "*",
   cors({
     origin: (origin) => {
       return allowedOrigins.includes(origin) ? origin : null;

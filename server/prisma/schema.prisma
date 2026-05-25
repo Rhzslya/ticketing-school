@@ -27,6 +27,16 @@ enum Status {
   SUBMITTED
   ONGOING
   DONE
+  REJECTED
+}
+
+enum TicketCategory {
+  NETWORK       
+  HARDWARE      
+  SOFTWARE      
+  ELECTRICAL 
+  FACILITIES    
+  OTHERS       
 }
 
 
@@ -37,10 +47,14 @@ model User {
   password  String?  @db.VarChar(100)
   fullName      String   @db.VarChar(100)
   role      UserRole @default(TEACHER)
+
   tickets   Ticket[]
+  ticketReplies TicketReply[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@map("users")
 }
 
 model Ticket {
@@ -49,6 +63,8 @@ model Ticket {
   description String   @db.Text
   priority    Priority @default(LOW)
   status      Status   @default(SUBMITTED)
+
+  category    TicketCategory  @default(OTHERS)
   
   submitterId Int
   submitter   User     @relation(fields: [submitterId], references: [id])
@@ -57,6 +73,26 @@ model Ticket {
 
   deleted_at DateTime?
 
+  replies        TicketReply[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("tickets")
+}
+
+model TicketReply {
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  message   String   @db.Text
+  
+  ticketId  String   @db.VarChar(50)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  
+  senderId  Int
+  sender    User     @relation(fields: [senderId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ticket_replies")
 }

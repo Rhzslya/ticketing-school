@@ -1,5 +1,9 @@
 import type { Ticket, User } from "../src/generated/prisma/client";
-import type { Priority, Status } from "../src/generated/prisma/enums";
+import type {
+  Priority,
+  Status,
+  TicketCategory,
+} from "../src/generated/prisma/enums";
 
 export type TicketResponse = {
   id: string;
@@ -7,6 +11,7 @@ export type TicketResponse = {
   description: string;
   priority: Priority;
   status: Status;
+  category: TicketCategory;
   submitterId: number;
   submitter: {
     id: number;
@@ -22,6 +27,7 @@ export type CreateTicketRequest = {
   title: string;
   description: string;
   priority?: Priority;
+  category?: TicketCategory;
   attachments?: File[];
 };
 
@@ -31,6 +37,7 @@ export type UpdateTicketRequest = {
   description?: string;
   priority?: Priority;
   status?: Status;
+  category?: TicketCategory;
   attachments?: File[];
   delete_attachment?: boolean;
 };
@@ -39,11 +46,20 @@ export type SearchTicketRequest = {
   keyword?: string;
   priority?: Priority;
   status?: Status;
+  category?: TicketCategory;
   submitterId?: number;
+  is_deleted?: boolean;
   page: number;
   size: number;
-  sortBy?: string;
-  sortOrder?: string;
+  sortBy?: "createdAt" | "updatedAt" | "priority" | "status" | "category";
+  sortOrder?: "asc" | "desc";
+};
+
+export type TicketStatisticsResponse = {
+  total: number;
+  byStatus: Record<Status, number>;
+  byPriority: Record<Priority, number>;
+  byCategory: Record<TicketCategory, number>;
 };
 
 export type DeleteTicketRequest = {
@@ -51,6 +67,10 @@ export type DeleteTicketRequest = {
 };
 
 export type RestoreTicketRequest = {
+  id: string;
+};
+
+export type GetDetailedTicketRequest = {
   id: string;
 };
 
@@ -63,6 +83,7 @@ export function toTicketResponse(
     description: ticket.description,
     priority: ticket.priority,
     status: ticket.status,
+    category: ticket.category,
     attachment_url: ticket.attachment_url,
     submitterId: ticket.submitterId,
     submitter: ticket.submitter

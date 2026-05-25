@@ -15,7 +15,10 @@ export class UserController {
 
       const response = await UserService.register(request);
 
-      return c.json({ data: response });
+      return c.json({
+        message: "Register Success",
+        data: response,
+      });
     } catch (error) {
       throw error;
     }

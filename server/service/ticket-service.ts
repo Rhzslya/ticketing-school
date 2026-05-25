@@ -1,15 +1,24 @@
 import { ResponseError } from "../error/response-error";
 import type { CheckDataExist } from "../model/general-model";
+import type { Pageable } from "../model/page-model";
 import {
   toTicketResponse,
   type CreateTicketRequest,
   type DeleteTicketRequest,
+  type GetDetailedTicketRequest,
   type RestoreTicketRequest,
+  type SearchTicketRequest,
   type TicketResponse,
+  type TicketStatisticsResponse,
   type UpdateTicketRequest,
 } from "../model/ticket-model";
 import { Status, UserRole, type User } from "../src/generated/prisma/browser";
-import type { Prisma, Ticket } from "../src/generated/prisma/client";
+import {
+  Priority,
+  Prisma,
+  TicketCategory,
+  type Ticket,
+} from "../src/generated/prisma/client";
 import { prismaClient } from "../src/lib/prisma";
 import { isValidFile } from "../utils/cloudinary-guard";
 import { TicketValidation } from "../validation/ticket-validation";
@@ -73,6 +82,7 @@ export class TicketService {
         description: createRequest.description,
         attachment_url: attachmentUrls,
         priority: createRequest.priority,
+        category: createRequest.category,
         submitterId: user.id,
       },
       include: {
@@ -89,6 +99,20 @@ export class TicketService {
   ): Promise<TicketResponse> {
     const updateRequest = Validation.validate(TicketValidation.UPDATE, request);
     const oldTicket = await this.checkTicketExist({ id: updateRequest.id });
+
+    if (oldTicket.status === Status.REJECTED) {
+      throw new ResponseError(
+        403,
+        "Cannot update a ticket that has been rejected",
+      );
+    }
+
+    if (oldTicket.status === Status.DONE) {
+      throw new ResponseError(
+        403,
+        "Cannot update a ticket that is currently already completed (DONE).",
+      );
+    }
 
     const isCreator = user.id === oldTicket.submitterId;
     const isAdmin = user.role === UserRole.ADMIN;
@@ -123,8 +147,12 @@ export class TicketService {
     }
 
     const isUpdatingContent =
-      updateRequest.title ||
-      updateRequest.description ||
+      (updateRequest.title !== undefined &&
+        updateRequest.title !== oldTicket.title) ||
+      (updateRequest.description !== undefined &&
+        updateRequest.description !== oldTicket.description) ||
+      (updateRequest.category !== undefined &&
+        updateRequest.category !== oldTicket.category) ||
       updateRequest.delete_attachment === true ||
       (request.attachments && request.attachments.length > 0);
 
@@ -176,6 +204,7 @@ export class TicketService {
       if (updateRequest.title) updateData.title = updateRequest.title;
       if (updateRequest.description)
         updateData.description = updateRequest.description;
+      if (updateRequest.category) updateData.category = updateRequest.category;
 
       let attachmentUrls = oldTicket.attachment_url;
 
@@ -308,6 +337,204 @@ export class TicketService {
     });
 
     return toTicketResponse(restoredTicket);
+  }
+
+  static async search(
+    user: User,
+    request: SearchTicketRequest,
+  ): Promise<Pageable<TicketResponse>> {
+    const searchRequest = Validation.validate(TicketValidation.SEARCH, request);
+
+    const skip = (searchRequest.page - 1) * searchRequest.size;
+    const andFilters: Prisma.TicketWhereInput[] = [];
+
+    if (user.role === UserRole.TEACHER) {
+      andFilters.push({ submitterId: user.id });
+    } else if (user.role === UserRole.ADMIN && searchRequest.submitterId) {
+      andFilters.push({ submitterId: searchRequest.submitterId });
+    }
+
+    if (searchRequest.keyword) {
+      andFilters.push({
+        OR: [
+          { title: { contains: searchRequest.keyword, mode: "insensitive" } },
+          {
+            description: {
+              contains: searchRequest.keyword,
+              mode: "insensitive",
+            },
+          },
+        ],
+      });
+    }
+
+    if (searchRequest.priority) {
+      andFilters.push({ priority: searchRequest.priority as Priority });
+    }
+
+    if (searchRequest.status) {
+      andFilters.push({ status: searchRequest.status as Status });
+    }
+
+    if (searchRequest.category) {
+      andFilters.push({ category: searchRequest.category as TicketCategory });
+    }
+
+    const whereClause: Prisma.TicketWhereInput = {
+      deleted_at: searchRequest.is_deleted ? { not: null } : null,
+      AND: andFilters.length > 0 ? andFilters : undefined,
+    };
+
+    const [tickets, totalItems] = await prismaClient.$transaction([
+      prismaClient.ticket.findMany({
+        where: whereClause,
+        take: searchRequest.size,
+        skip: skip,
+        orderBy: {
+          [searchRequest.sortBy || "createdAt"]:
+            searchRequest.sortOrder || "desc",
+        },
+        include: {
+          submitter: true,
+        },
+      }),
+      prismaClient.ticket.count({
+        where: whereClause,
+      }),
+    ]);
+
+    return {
+      data: tickets.map((ticket) => toTicketResponse(ticket)),
+      paging: {
+        size: searchRequest.size,
+        current_page: searchRequest.page,
+        total_page: Math.ceil(totalItems / searchRequest.size),
+      },
+    };
+  }
+
+  static async getStatistics(user: User): Promise<TicketStatisticsResponse> {
+    const baseWhereClause: Prisma.TicketWhereInput = {
+      deleted_at: null,
+    };
+
+    if (user.role === UserRole.TEACHER) {
+      baseWhereClause.submitterId = user.id;
+    }
+
+    const [
+      total,
+      statusSubmitted,
+      statusOngoing,
+      statusDone,
+      statusRejected,
+      priorityLow,
+      priorityMedium,
+      priorityHigh,
+      categoryNetwork,
+      categoryHardware,
+      categorySoftware,
+      categoryElectrical,
+      categoryFacilities,
+      categoryOthers,
+    ] = await prismaClient.$transaction([
+      prismaClient.ticket.count({ where: baseWhereClause }),
+
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, status: Status.SUBMITTED },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, status: Status.ONGOING },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, status: Status.DONE },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, status: Status.REJECTED },
+      }),
+
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, priority: Priority.LOW },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, priority: Priority.MEDIUM },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, priority: Priority.HIGH },
+      }),
+
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.NETWORK },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.HARDWARE },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.SOFTWARE },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.ELECTRICAL },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.FACILITIES },
+      }),
+      prismaClient.ticket.count({
+        where: { ...baseWhereClause, category: TicketCategory.OTHERS },
+      }),
+    ]);
+
+    return {
+      total,
+      byStatus: {
+        SUBMITTED: statusSubmitted,
+        ONGOING: statusOngoing,
+        DONE: statusDone,
+        REJECTED: statusRejected,
+      },
+      byPriority: {
+        LOW: priorityLow,
+        MEDIUM: priorityMedium,
+        HIGH: priorityHigh,
+      },
+      byCategory: {
+        NETWORK: categoryNetwork,
+        HARDWARE: categoryHardware,
+        SOFTWARE: categorySoftware,
+        ELECTRICAL: categoryElectrical,
+        FACILITIES: categoryFacilities,
+        OTHERS: categoryOthers,
+      },
+    };
+  }
+
+  static async get(
+    user: User,
+    request: GetDetailedTicketRequest,
+  ): Promise<TicketResponse> {
+    const getRequest = Validation.validate(TicketValidation.GET, request);
+
+    const ticket = await prismaClient.ticket.findFirst({
+      where: {
+        id: getRequest.id,
+        deleted_at: null,
+      },
+      include: {
+        submitter: true,
+      },
+    });
+
+    if (!ticket) {
+      throw new ResponseError(404, "Ticket not found");
+    }
+
+    if (user.role === UserRole.TEACHER && ticket.submitterId !== user.id) {
+      throw new ResponseError(
+        403,
+        "You do not have permission to access this ticket",
+      );
+    }
+
+    return toTicketResponse(ticket);
   }
 
   static async checkTicketExist(request: CheckDataExist): Promise<Ticket> {

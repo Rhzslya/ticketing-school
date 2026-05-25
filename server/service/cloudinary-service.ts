@@ -72,7 +72,7 @@ export class CloudinaryService {
 
   static async deleteImage(url: string): Promise<void> {
     try {
-      const rootFolder = "ticketing";
+      const rootFolder = "ticketing-school";
       const parts = url.split("/");
       const rootIndex = parts.indexOf(rootFolder);
 

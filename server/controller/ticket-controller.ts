@@ -1,7 +1,13 @@
 import type { Context } from "hono";
-import type { Priority, Status, User } from "../src/generated/prisma/client";
+import {
+  Priority,
+  TicketCategory,
+  type Status,
+  type User,
+} from "../src/generated/prisma/client";
 import type {
   CreateTicketRequest,
+  SearchTicketRequest,
   UpdateTicketRequest,
 } from "../model/ticket-model";
 import { ResponseError } from "../error/response-error";
@@ -24,6 +30,7 @@ export class TicketController {
           title: body.title as string,
           description: body.description as string,
           priority: body.priority as Priority,
+          category: body.category as TicketCategory,
         };
 
         if (body.attachments) {
@@ -66,6 +73,7 @@ export class TicketController {
           description: body.description as string,
           priority: body.priority as Priority,
           status: body.status as Status,
+          category: body.category as TicketCategory,
 
           delete_attachment: body.delete_attachment === "true",
         };
@@ -112,6 +120,69 @@ export class TicketController {
       const id = c.req.param("id") as string;
 
       const response = await TicketService.restore(user, { id });
+
+      return c.json({ data: response });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async search(c: Context) {
+    try {
+      const user = c.var.user as User;
+
+      const request: SearchTicketRequest = {
+        keyword: c.req.query("keyword"),
+
+        priority: c.req.query("priority") as Priority,
+        status: c.req.query("status") as Status,
+        category: c.req.query("category") as TicketCategory,
+
+        submitterId: c.req.query("submitterId")
+          ? Number(c.req.query("submitterId"))
+          : undefined,
+
+        is_deleted: c.req.query("is_deleted")
+          ? c.req.query("is_deleted") === "true"
+          : undefined,
+
+        page: c.req.query("page") ? Number(c.req.query("page")) : 1,
+        size: c.req.query("size") ? Number(c.req.query("size")) : 10,
+
+        sortBy: c.req.query("sortBy") as
+          | "createdAt"
+          | "updatedAt"
+          | "priority"
+          | "status"
+          | "category",
+        sortOrder: c.req.query("sortOrder") as "asc" | "desc",
+      };
+
+      const response = await TicketService.search(user, request);
+
+      return c.json(response);
+    } catch (error) {
+      throw error;
+    }
+  }
+  static async get(c: Context) {
+    try {
+      const user = c.var.user as User;
+      const id = c.req.param("id") as string;
+
+      const response = await TicketService.get(user, { id });
+
+      return c.json({ data: response });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getStatistics(c: Context) {
+    try {
+      const user = c.var.user as User;
+
+      const response = await TicketService.getStatistics(user);
 
       return c.json({ data: response });
     } catch (error) {
