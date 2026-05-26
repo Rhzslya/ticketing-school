@@ -66,6 +66,10 @@ Copy the .env.example file and rename it to .env in the root directory. Fill in 
 CLOUDINARY_API_KEY="your_api_key_here"
 CLOUDINARY_API_SECRET="your_api_secret_here"`
 
+# VITE_API_URL
+
+`VITE_API_URL="https://schdesk.my.id/api"`
+
 # Google Gemini AI
 
 `GEMINI_API_KEY="your_gemini_api_key_here"`
