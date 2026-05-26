@@ -20,7 +20,7 @@ export class AiService {
 
       // 2. Structured Prompt Engineering: Provide system boundaries and expected enums
       const prompt = `
-        Your task is to analyze a school facility complaint description (provided in Indonesian) and determine the most appropriate PRIORITY and CATEGORY for the IT Helpdesk.
+        Your task is to analyze a school facility complaint description (provided in Indonesian) and determine the most appropriate PRIORITY and CATEGORY for the Helpdesk.
 
         PRIORITY Options: "${Priority.LOW}", "${Priority.MEDIUM}", "${Priority.HIGH}"
         CATEGORY Options: "${TicketCategory.ELECTRICAL}", "${TicketCategory.FACILITIES}", "${TicketCategory.HARDWARE}", "${TicketCategory.NETWORK}", "${TicketCategory.OTHERS}", "${TicketCategory.SOFTWARE}"

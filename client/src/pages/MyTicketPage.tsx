@@ -455,7 +455,7 @@ export const MyTicketPage = () => {
             <div className="flex items-center gap-3 text-blue-200/60">
               <TicketIcon className="size-8" strokeWidth={1} />
               <span className="text-xs uppercase tracking-widest font-semibold">
-                IT Ticketing System
+                Helpdesk
               </span>
             </div>
           </div>

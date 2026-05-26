@@ -344,8 +344,7 @@ const DashboardTicketPage = () => {
       animate="visible"
     >
       <motion.div variants={itemVariants}>
-        <DashboardHeader title="IT Ticket Management">
-          {/* DESKTOP CONTROLS (Hidden on Mobile)                       */}
+        <DashboardHeader title="Helpdesk Management">
           <div className="hidden lg:flex flex-wrap items-center gap-2 xl:gap-3 w-full justify-end mb-2">
             <div className="relative w-40 xl:w-64 shrink-0 transition-all duration-300">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
