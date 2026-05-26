@@ -1,0 +1,142 @@
+name: Ticketing App CI/CD Pipeline
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend Validation (Bun, Hono, Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: testpassword123
+          POSTGRES_DB: helpdesk_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Prepare Environment Variables
+        run: |
+          touch .env
+          echo "DATABASE_URL=postgresql://root:testpassword123@127.0.0.1:5432/helpdesk_test?schema=public" >> .env
+          echo "JWT_SECRET=super_secret_test_key_123" >> .env
+          echo "REDIS_URL=redis://127.0.0.1:6379" >> .env
+          echo "GEMINI_API_KEY=dummy_gemini_key" >> .env
+          echo "CLOUDINARY_CLOUD_NAME=dummy" >> .env
+          echo "CLOUDINARY_API_KEY=dummy" >> .env
+          echo "CLOUDINARY_API_SECRET=dummy" >> .env
+
+          # Inject to GITHUB_ENV
+          cat .env >> $GITHUB_ENV
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: Setup Database Schema
+        run: bunx prisma db push
+
+      - name: Run Backend Tests
+        run: bun test
+
+  frontend-build:
+    name: Frontend Validation (React, Vite, TS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run ESLint Check
+        run: bun run lint
+
+      - name: Test Production Build
+        run: bun run build
+
+  deploy-vps:
+    name: Continuous Deployment (VPS)
+    needs: [backend-tests, frontend-build]
+    if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # 1. Navigate to the main project directory on the server
+            cd ~/path/to/your/ticketing-app
+
+            # 2. Pull the latest code updates
+            git pull origin main
+
+            # 3. Run database migrations (Safe for Production)
+            cd server
+            bun install
+            bunx prisma generate
+            bunx prisma migrate deploy
+            cd ..
+
+            # 4. Rebuild images and start containers (Frontend & Backend)
+            docker compose up -d --build
+
+            # 5. Clean up unused/dangling Docker images
+            docker image prune -f

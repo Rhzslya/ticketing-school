@@ -21,7 +21,7 @@ A modern, fast, and integrated ticketing system designed for school facilities a
 - **ORM:** Prisma
 - **AI Integration:** Google Generative AI (Gemini)
 - **Storage:** Cloudinary (for attachment uploads)
-- **Security:** bcrypt, JWT, Hono Rate Limiter
+- **Security:** bcrypt, JWT, Hono
 
 ---
 
@@ -133,7 +133,7 @@ bun run preview
 
 - Can create tickets.
 - Can view all own tickets.
-- Can only view, update, and track their own tickets.
+- Can only view, update (if status only `SUBMITTED`), and track their own tickets.
 - Cannot change ticket after it is processed (Status !== SUBMITTED).
 - Cannot alter the content (title/description/priority/category) of a ticket.
 
@@ -194,7 +194,7 @@ bun run preview
 
 ### 1. Database Query Optimization (Prisma -> Raw SQL)
 
-Currently, the application relies on Prisma ORM for database interactions. While Prisma offers excellent developer experience (DX) and type safety, its abstraction layer and lack of native prepared statements can lead to performance bottlenecks as the dataset grows significantly.
+Currently, the application relies on Prisma ORM for database interactions. While Prisma offers excellent developer experience and type safety, its abstraction layer and lack of native prepared statements can lead to performance bottlenecks as the dataset grows significantly.
 
 #### Plan:
 
@@ -206,7 +206,7 @@ Implement Redis to cache frequently accessed but rarely changing data, such as T
 
 ### 3. Real-time Updates (WebSocket)
 
-Integrate WebSockets (using Bun's native WebSocket implementation) to push real-time notifications to Teachers when an Admin changes the status of their ticket, eliminating the need for manual page refreshes.
+Integrate WebSockets to push real-time notifications to Teachers when an Admin changes the status of their ticket, eliminating the need for manual page refreshes.
 
 ### 4. Enhanced Security & Advanced Authentication
 
@@ -258,3 +258,15 @@ To maintain high-quality team support and ensure critical issues are addressed p
 **Planned Capabilities:**
 
 **Priority-Based Deadlines**: Assign strict, automated response and resolution timeframes based on ticket priority. For example, HIGH priority issues will trigger a countdown requiring immediate action within a specifically defined short window.
+
+### 9. Frontend Architecture Refactoring (Modularity & Reusability)
+
+As the application grows with new features, maintaining a clean frontend codebase becomes crucial. The current frontend architecture will undergo a structural refactor to prioritize modularity, reusability, and strict separation of concerns.
+
+**Planned Capabilities:**
+
+**Component-Driven Development**: Break down monolithic pages into smaller, highly reusable UI components following Atomic Design principles.
+
+**Logic Decoupling (Custom Hooks)**: Extract complex business logic, API integrations, and state management out of UI rendering components and into dedicated custom React hooks.
+
+**Centralized Utilities & Services**: Standardize API client calls, formatting functions, and static configurations into shared utility modules to ensure absolute consistency across both the User and Admin dashboards.

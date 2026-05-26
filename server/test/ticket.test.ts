@@ -1,4 +1,4 @@
-import { describe, afterEach, beforeEach, it, expect } from "bun:test";
+import { describe, afterEach, beforeEach, it, expect, spyOn } from "bun:test";
 import { TestRequest, UserTest } from "./test-utils";
 import { logger } from "../src/application/logging";
 import { prismaClient } from "../src/lib/prisma";
@@ -9,6 +9,17 @@ import {
   TicketCategory,
   UserRole,
 } from "../src/generated/prisma/enums";
+import { CloudinaryService } from "../service/cloudinary-service";
+
+spyOn(CloudinaryService, "uploadAttachmentTicket").mockImplementation(
+  async () => {
+    return "https://res.cloudinary.com/dummy/image/upload/v1234567/dummy-ticket.png";
+  },
+);
+
+spyOn(CloudinaryService, "deleteImage").mockImplementation(async () => {
+  return Promise.resolve();
+});
 
 describe("POST /api/tickets", () => {
   let authToken = "";

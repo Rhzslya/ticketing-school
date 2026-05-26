@@ -5,6 +5,7 @@ import { Priority, TicketCategory } from "../src/generated/prisma/enums";
 export class AiService {
   static async analyzeTicket(description: string): Promise<AnalyzeResponse> {
     try {
+      // 1. Guard Clause: Ensure the necessary orchestration API Key is available
       if (!process.env.GEMINI_API_KEY) {
         throw new Error(
           "GEMINI_API_KEY is not defined in environment variables.",
@@ -17,6 +18,7 @@ export class AiService {
         model: "gemini-3.1-flash-lite",
       });
 
+      // 2. Structured Prompt Engineering: Provide system boundaries and expected enums
       const prompt = `
         Your task is to analyze a school facility complaint description (provided in Indonesian) and determine the most appropriate PRIORITY and CATEGORY for the IT Helpdesk.
 
@@ -32,6 +34,7 @@ export class AiService {
         }
       `;
 
+      // 3. Dispatch execution to Gemini cluster with runtime constraint instructions
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
@@ -41,6 +44,7 @@ export class AiService {
 
       const responseText = result.response.text();
 
+      // 4. Sanitization: Strip out markdown formatting fences (```json ... ```)
       const cleanJson = responseText
         .replace(/```json/gi, "")
         .replace(/```/gi, "")
@@ -48,6 +52,7 @@ export class AiService {
 
       return JSON.parse(cleanJson);
     } catch (error) {
+      // 5. Fault-Tolerance Fallback Strategy:
       return { priority: Priority.LOW, category: TicketCategory.OTHERS };
     }
   }

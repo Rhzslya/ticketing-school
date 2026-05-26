@@ -6,6 +6,7 @@ import {
   type DeleteTicketRequest,
   type DeleteTicketResponse,
   type GetDetailedTicketRequest,
+  type RestoreTicketRequest,
   type SearchTicketRequest,
   type TicketResponse,
   type TicketStatisticsResponse,
@@ -81,6 +82,13 @@ export class TicketService {
     return {
       message: response.data.message || "Ticket deleted successfully",
     };
+  }
+  static async restore(request: RestoreTicketRequest): Promise<TicketResponse> {
+    const response = await api.patch<ApiResponse<TicketResponse>>(
+      `/tickets/${request.id}/restore`,
+    );
+
+    return toTicketResponse(response.data.data);
   }
 
   static async getStatistic(): Promise<TicketStatisticsResponse> {

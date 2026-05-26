@@ -5,6 +5,7 @@ import type {
   DeleteTicketRequest,
   DeleteTicketResponse,
   GetDetailedTicketRequest,
+  RestoreTicketRequest,
   SearchTicketRequest,
   TicketResponse,
   TicketStatisticsResponse,
@@ -81,6 +82,21 @@ export const useTicketQueries = () => {
         queryClient.invalidateQueries({ queryKey: TICKET_KEYS.lists() });
       },
       onError: (error) => handleApiError(error, "Failed to delete ticket"),
+    }),
+
+    restoreMutation: useMutation({
+      mutationFn: (data: RestoreTicketRequest): Promise<TicketResponse> =>
+        TicketService.restore(data),
+      onSuccess: (result, variables) => {
+        toast.success("Ticket Restored", {
+          description: `Ticket ${result.id} restored successfully.`,
+        });
+        queryClient.invalidateQueries({ queryKey: TICKET_KEYS.lists() });
+        queryClient.invalidateQueries({
+          queryKey: TICKET_KEYS.detail(variables),
+        });
+      },
+      onError: (error) => handleApiError(error, "Failed to restore product"),
     }),
 
     useStatistics: (): UseQueryResult<TicketStatisticsResponse, Error> => {

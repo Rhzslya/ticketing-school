@@ -30,14 +30,16 @@ export class TicketService {
     user: User,
     request: CreateTicketRequest,
   ): Promise<TicketResponse> {
+    // 1. Validate payload structure using defined Zod schema
     const createRequest = Validation.validate(TicketValidation.CREATE, request);
 
+    // 2. Anti-spam / Duplicate prevention check
     const existingTicket = await prismaClient.ticket.findFirst({
       where: {
         submitterId: user.id,
         title: createRequest.title,
         status: {
-          in: [Status.SUBMITTED, Status.ONGOING],
+          in: [Status.SUBMITTED, Status.ONGOING], // Restrict matching active issues
         },
       },
     });
@@ -51,12 +53,15 @@ export class TicketService {
 
     let attachmentUrls: string[] = [];
 
+    // 3. Process file attachments if present
     if (request.attachments && request.attachments.length > 0) {
+      // Clean title string to create a standard slug structure for assets
       const sanitizedName = createRequest.title
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "-")
         .replace(/-+/g, "-");
 
+      // Execute non-blocking parallel uploads via Promise.all
       const uploadPromises = request.attachments.map((file, index) => {
         if (isValidFile(file)) {
           const fileName = `${sanitizedName}-${Date.now()}-${index}`;
@@ -73,8 +78,10 @@ export class TicketService {
       attachmentUrls = results.filter((url) => url !== "");
     }
 
+    // 4. Generate unique business tracker identifier
     const newTicketId = this.generateTicketId();
 
+    // 5. Persist record to storage
     const ticket = await prismaClient.ticket.create({
       data: {
         id: newTicketId,
@@ -100,6 +107,7 @@ export class TicketService {
     const updateRequest = Validation.validate(TicketValidation.UPDATE, request);
     const oldTicket = await this.checkTicketExist({ id: updateRequest.id });
 
+    // State Guards: Completed or Rejected records must block structural modifications
     if (oldTicket.status === Status.REJECTED) {
       throw new ResponseError(
         403,
@@ -114,6 +122,7 @@ export class TicketService {
       );
     }
 
+    // Authorization evaluation matrix
     const isCreator = user.id === oldTicket.submitterId;
     const isAdmin = user.role === UserRole.ADMIN;
 
@@ -126,6 +135,7 @@ export class TicketService {
 
     const updateData: Prisma.TicketUpdateInput = {};
 
+    // Administrative Fields: Handle lifecycle progression
     if (updateRequest.status) {
       if (!isAdmin) {
         throw new ResponseError(
@@ -136,7 +146,9 @@ export class TicketService {
       updateData.status = updateRequest.status;
     }
 
+    // Priority updates management
     if (updateRequest.priority) {
+      // Teachers can only modify priority during tentative initial submission phases
       if (!isAdmin && oldTicket.status !== Status.SUBMITTED) {
         throw new ResponseError(
           403,
@@ -146,6 +158,7 @@ export class TicketService {
       updateData.priority = updateRequest.priority;
     }
 
+    // Content Mutators: Detect changes to textual fields or functional assets
     const isUpdatingContent =
       (updateRequest.title !== undefined &&
         updateRequest.title !== oldTicket.title) ||
@@ -157,6 +170,7 @@ export class TicketService {
       (request.attachments && request.attachments.length > 0);
 
     if (isUpdatingContent) {
+      // Restriction: Admins cannot reshape core content provided by standard users
       if (!isCreator) {
         throw new ResponseError(
           403,
@@ -164,6 +178,7 @@ export class TicketService {
         );
       }
 
+      // Lock: Submitter can't modify textual fields if processing is underway
       if (oldTicket.status !== Status.SUBMITTED) {
         throw new ResponseError(
           403,
@@ -171,6 +186,7 @@ export class TicketService {
         );
       }
 
+      // Check collision/duplication metrics if primary fields change
       if (
         updateRequest.title ||
         updateRequest.description ||
@@ -208,6 +224,7 @@ export class TicketService {
 
       let attachmentUrls = oldTicket.attachment_url;
 
+      // Handle file deletion from target remote CDN cluster
       if (updateRequest.delete_attachment === true) {
         if (attachmentUrls.length > 0) {
           const deletePromises = attachmentUrls.map((url) =>
@@ -218,6 +235,7 @@ export class TicketService {
         attachmentUrls = [];
       }
 
+      // Process newly added attachments on update action
       if (request.attachments && request.attachments.length > 0) {
         const sanitizedName = (updateRequest.title ?? oldTicket.title)
           .toLowerCase()
@@ -245,6 +263,7 @@ export class TicketService {
       updateData.attachment_url = attachmentUrls;
     }
 
+    // Execute state compilation updates down to ORM layer
     const ticket = await prismaClient.ticket.update({
       where: {
         id: request.id,
@@ -275,6 +294,7 @@ export class TicketService {
       );
     }
 
+    // Submitter Guard: Teachers cannot pull down issues already locked in processing stages
     if (!isAdmin && ticket.status !== Status.SUBMITTED) {
       throw new ResponseError(
         403,
@@ -282,6 +302,7 @@ export class TicketService {
       );
     }
 
+    // Perform Soft Delete action
     await prismaClient.ticket.update({
       where: {
         id: ticket.id,
@@ -310,6 +331,7 @@ export class TicketService {
       request,
     );
 
+    // Look explicitly into soft deleted vectors
     const ticketInTrash = await prismaClient.ticket.findFirst({
       where: {
         id: restoreRequest.id,
@@ -348,12 +370,14 @@ export class TicketService {
     const skip = (searchRequest.page - 1) * searchRequest.size;
     const andFilters: Prisma.TicketWhereInput[] = [];
 
+    // Tenant Check: Teachers can never request or peek records beyond their scope
     if (user.role === UserRole.TEACHER) {
       andFilters.push({ submitterId: user.id });
     } else if (user.role === UserRole.ADMIN && searchRequest.submitterId) {
       andFilters.push({ submitterId: searchRequest.submitterId });
     }
 
+    // Textual case-insensitive search parameters mapping
     if (searchRequest.keyword) {
       andFilters.push({
         OR: [
@@ -368,6 +392,7 @@ export class TicketService {
       });
     }
 
+    // Enumerated relational filter bindings
     if (searchRequest.priority) {
       andFilters.push({ priority: searchRequest.priority as Priority });
     }
@@ -380,11 +405,13 @@ export class TicketService {
       andFilters.push({ category: searchRequest.category as TicketCategory });
     }
 
+    // Define structural aggregation parameters
     const whereClause: Prisma.TicketWhereInput = {
       deleted_at: searchRequest.is_deleted ? { not: null } : null,
       AND: andFilters.length > 0 ? andFilters : undefined,
     };
 
+    // Execute concurrently across an atomic database transaction
     const [tickets, totalItems] = await prismaClient.$transaction([
       prismaClient.ticket.findMany({
         where: whereClause,
@@ -418,10 +445,12 @@ export class TicketService {
       deleted_at: null,
     };
 
+    // Secure data-isolation logic: limit calculation vectors for non-administrative roles
     if (user.role === UserRole.TEACHER) {
       baseWhereClause.submitterId = user.id;
     }
 
+    // Optimized isolated batch counts executing on internal parallel thread pools
     const [
       total,
       statusSubmitted,
@@ -440,6 +469,7 @@ export class TicketService {
     ] = await prismaClient.$transaction([
       prismaClient.ticket.count({ where: baseWhereClause }),
 
+      // Counts segmented by current status
       prismaClient.ticket.count({
         where: { ...baseWhereClause, status: Status.SUBMITTED },
       }),
@@ -453,6 +483,7 @@ export class TicketService {
         where: { ...baseWhereClause, status: Status.REJECTED },
       }),
 
+      // Counts segmented by impact priority
       prismaClient.ticket.count({
         where: { ...baseWhereClause, priority: Priority.LOW },
       }),
@@ -463,6 +494,7 @@ export class TicketService {
         where: { ...baseWhereClause, priority: Priority.HIGH },
       }),
 
+      // Counts segmented by functional infrastructural categorization
       prismaClient.ticket.count({
         where: { ...baseWhereClause, category: TicketCategory.NETWORK },
       }),
@@ -507,6 +539,9 @@ export class TicketService {
     };
   }
 
+  /**
+   * Retrieves full details of a specific ticket, protected by standard security scopes.
+   */
   static async get(
     user: User,
     request: GetDetailedTicketRequest,
@@ -527,6 +562,7 @@ export class TicketService {
       throw new ResponseError(404, "Ticket not found");
     }
 
+    // Scope Guard: Enforce access barriers so teachers cannot access other users' data
     if (user.role === UserRole.TEACHER && ticket.submitterId !== user.id) {
       throw new ResponseError(
         403,

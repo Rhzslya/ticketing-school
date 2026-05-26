@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Priority, Status } from "@/enum/ticket";
+import { Status } from "@/enum/ticket";
 import type { TicketResponse } from "@/model/ticket-model";
 import {
   DropdownMenu,
@@ -33,10 +33,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Eye, Edit2, Trash2, Loader2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Edit2,
+  Trash2,
+  Loader2,
+  ArchiveRestore,
+} from "lucide-react";
 import { useTicketQueries } from "@/hooks/ticket-queries";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { TruncatedTooltip } from "@/components/utils/truncatedTooltip";
+import { getPriorityStyle, getStatusStyle } from "@/utils/get-style";
 
 // --- Framer Motion Animations ---
 const tableRowVariants: Variants = {
@@ -52,21 +60,27 @@ interface DashboardTicketTableProps {
   tickets: TicketResponse[];
   isLoading: boolean;
   onSuccess?: () => void;
+  isTrashView?: boolean;
 }
 
 export function DashboardTicketTable({
   tickets,
   isLoading,
   onSuccess,
+  isTrashView,
 }: DashboardTicketTableProps) {
   const navigate = useNavigate();
-  const { deleteMutation } = useTicketQueries();
-  const { mutateAsync: deleteTicket, isPending: isDeleting } = deleteMutation;
+  const { deleteMutation, restoreMutation } = useTicketQueries();
+  const { mutateAsync: deleteTicket } = deleteMutation;
+
+  const isDeleting = deleteMutation.isPending;
+  const isRestoring = restoreMutation.isPending;
 
   const [selectedTicket, setSelectedTicket] = useState<TicketResponse | null>(
     null,
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
 
   // --- HANDLERS ---
   const handleViewDetail = (ticket: TicketResponse) => {
@@ -88,32 +102,13 @@ export function DashboardTicketTable({
     }
   };
 
-  // --- STYLING HELPERS ---
-  const getStatusStyle = (status?: Status) => {
-    switch (status) {
-      case Status.SUBMITTED:
-        return "bg-slate-100 text-slate-600 border-slate-200";
-      case Status.ONGOING:
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      case Status.DONE:
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case Status.REJECTED:
-        return "bg-red-100 text-red-700 border-red-200";
-      default:
-        return "bg-slate-50 text-slate-600 border-slate-200";
-    }
-  };
-
-  const getPriorityStyle = (priority?: Priority) => {
-    switch (priority) {
-      case Priority.HIGH:
-        return "text-red-700 bg-red-50 border-red-200";
-      case Priority.MEDIUM:
-        return "text-orange-700 bg-orange-50 border-orange-200";
-      case Priority.LOW:
-        return "text-teal-700 bg-teal-50 border-teal-200";
-      default:
-        return "text-slate-600 bg-slate-50 border-slate-100";
+  const handleRestoreConfirm = async () => {
+    if (!selectedTicket) return;
+    try {
+      await restoreMutation.mutateAsync({ id: selectedTicket.id });
+      setIsRestoreDialogOpen(false);
+    } catch {
+      // Error handled by mutation
     }
   };
 
@@ -140,6 +135,8 @@ export function DashboardTicketTable({
       </motion.div>
     );
   }
+
+  console.log(tickets);
 
   return (
     <>
@@ -267,38 +264,55 @@ export function DashboardTicketTable({
                         align="end"
                         className="w-44 rounded-xl shadow-xl border border-slate-100 p-1.5 bg-white"
                       >
-                        <DropdownMenuItem
-                          onClick={() => handleViewDetail(ticket)}
-                          className="cursor-pointer text-xs font-semibold text-slate-600 py-2.5 hover:bg-slate-50"
-                        >
-                          <Eye className="size-3.5 mr-2 text-primary" /> View
-                          Details
-                        </DropdownMenuItem>
+                        {isTrashView ? (
+                          <>
+                            <DropdownMenuSeparator className="bg-slate-100 my-1" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setIsRestoreDialogOpen(true);
+                              }}
+                              className="cursor-pointer text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-2.5"
+                            >
+                              <ArchiveRestore className="size-3.5 mr-2" />{" "}
+                              Restore Ticket
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => handleViewDetail(ticket)}
+                              className="cursor-pointer text-xs font-semibold text-slate-600 py-2.5 hover:bg-slate-50"
+                            >
+                              <Eye className="size-3.5 mr-2 text-primary" />{" "}
+                              View Details
+                            </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                          onClick={() => handleEditTicket(ticket)}
-                          className="cursor-pointer text-xs font-semibold text-slate-600 py-2.5 hover:bg-slate-50 data-disabled:opacity-50"
-                          disabled={
-                            ticket.status === Status.DONE ||
-                            ticket.status === Status.REJECTED
-                          }
-                        >
-                          <Edit2 className="size-3.5 mr-2 text-[#f1c40f]" />{" "}
-                          Edit Ticket
-                        </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditTicket(ticket)}
+                              className="cursor-pointer text-xs font-semibold text-slate-600 py-2.5 hover:bg-slate-50 data-disabled:opacity-50"
+                              disabled={
+                                ticket.status === Status.DONE ||
+                                ticket.status === Status.REJECTED
+                              }
+                            >
+                              <Edit2 className="size-3.5 mr-2 text-[#f1c40f]" />{" "}
+                              Edit Ticket
+                            </DropdownMenuItem>
 
-                        <DropdownMenuSeparator className="bg-slate-100 my-1" />
+                            <DropdownMenuSeparator className="bg-slate-100 my-1" />
 
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedTicket(ticket);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          // Use a soft but distinct red color so it doesn't look too flashy
-                          className="cursor-pointer text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 py-2.5"
-                        >
-                          <Trash2 className="size-3.5 mr-2" /> Delete Ticket
-                        </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="cursor-pointer text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 py-2.5"
+                            >
+                              <Trash2 className="size-3.5 mr-2" /> Delete Ticket
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -309,7 +323,6 @@ export function DashboardTicketTable({
         </div>
       </TooltipProvider>
 
-      {/* DELETE CONFIRMATION DIALOG */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -339,7 +352,8 @@ export function DashboardTicketTable({
                 handleDeleteConfirm();
               }}
               disabled={isDeleting}
-              variant="destructive"
+              variant="outline"
+              className="bg-destructive"
             >
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin mr-2" />
@@ -347,6 +361,51 @@ export function DashboardTicketTable({
                 <Trash2 className="size-4 mr-2" />
               )}
               Yes, Delete Ticket
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isRestoreDialogOpen}
+        onOpenChange={setIsRestoreDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-success">
+              Restore Issue Report?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore ticket{" "}
+              <span className="font-mono font-bold text-background">
+                {selectedTicket?.id}
+              </span>
+              ? It will be moved back to the active tickets list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              variant="ghost"
+              disabled={isRestoring}
+              className="text-muted-foreground"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="outline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleRestoreConfirm();
+              }}
+              disabled={isRestoring}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isRestoring ? (
+                <Loader2 className="size-4 animate-spin mr-2" />
+              ) : (
+                <ArchiveRestore className="size-4 mr-2" />
+              )}
+              Yes, Restore Ticket
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

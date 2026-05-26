@@ -345,9 +345,7 @@ const DashboardTicketPage = () => {
     >
       <motion.div variants={itemVariants}>
         <DashboardHeader title="IT Ticket Management">
-          {/* ========================================================= */}
           {/* DESKTOP CONTROLS (Hidden on Mobile)                       */}
-          {/* ========================================================= */}
           <div className="hidden lg:flex flex-wrap items-center gap-2 xl:gap-3 w-full justify-end mb-2">
             <div className="relative w-40 xl:w-64 shrink-0 transition-all duration-300">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -641,13 +639,14 @@ const DashboardTicketPage = () => {
 
                 <div className="p-4 sm:p-6 flex-1 overflow-y-auto space-y-6">
                   {/* MOBILE SEARCH */}
+
                   <div className="space-y-2.5">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Search tickets..."
-                        className="pl-8 pr-8 bg-muted/20 h-9 text-xs sm:text-sm"
+                        placeholder="Search Keyword"
+                        className="pl-8 pr-8 bg-muted/20 h-9 text-xs sm:text-sm focus-visible:ring-primary focus-visible:ring-1 [&::-webkit-search-cancel-button]:appearance-none text-muted"
                         value={mobileSearch}
                         onChange={(e) => setMobileSearch(e.target.value)}
                         onKeyDown={(e) =>
@@ -657,7 +656,7 @@ const DashboardTicketPage = () => {
                       {mobileSearch && (
                         <button
                           onClick={() => setMobileSearch("")}
-                          className="absolute right-2.5 top-2.5 text-muted-foreground"
+                          className="absolute right-2.5 top-2.5 text-muted-foreground cursor-pointer hover:text-destructive transition-colors"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -817,6 +816,7 @@ const DashboardTicketPage = () => {
           tickets={tickets}
           isLoading={isLoading}
           onSuccess={() => refetch()}
+          isTrashView={isDeletedApplied}
         />
       </motion.div>
 
