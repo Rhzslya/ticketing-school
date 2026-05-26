@@ -123,7 +123,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             # 1. Navigate to the main project directory on the server
-            cd ~/path/to/your/ticketing-app
+            cd ~/Seira/ticketing-app
 
             # 2. Pull the latest code updates
             git pull origin main
