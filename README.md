@@ -127,6 +127,26 @@ bun run preview
 
 # System Rules & Assumptions
 
+## How to Using Account
+
+### Login
+
+#### Teacher
+
+- Username : teacher
+- Email : teacher@test.com
+- Password : Teacher@123
+
+Can Login with Username or Email
+
+#### Admin
+
+- Username : admin
+- Email : admin@test.com
+- Password : Admin@123
+
+Can Login with Username or Email
+
 ## Role-Based Access Control (RBAC)
 
 ### TEACHER (User):

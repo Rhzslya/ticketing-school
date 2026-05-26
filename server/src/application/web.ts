@@ -12,7 +12,11 @@ export const web = new Hono();
 web.use("*", secureHeaders());
 web.use("*", logger());
 
-const allowedOrigins = ["http://localhost:5173", "http://localhost:4173"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "https://schdesk.my.id", // Your Domain
+];
 
 web.use(
   "*",
