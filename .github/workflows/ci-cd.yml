@@ -128,7 +128,7 @@ jobs:
             # 2. Pull the latest code updates
             git pull origin master
 
-            # 3. Rebuild images and start containers (Frontend & Backend)
+            # 3. Rebuild images and start containers
             docker compose up -d --build
 
             # 4. Clean up unused/dangling Docker images
