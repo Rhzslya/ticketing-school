@@ -2,7 +2,7 @@ import axios, { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
 });
 
@@ -37,8 +37,8 @@ api.interceptors.response.use(
           currentPath.startsWith("/auth/verify") ||
           currentPath.startsWith("/auth/reset-password") ||
           currentPath.startsWith("/forgot-password") ||
-          currentPath.startsWith("/products") ||
-          currentPath.startsWith("/services/track") ||
+          currentPath.startsWith("/tickets") ||
+          currentPath.startsWith("/tickets/track") ||
           currentPath.startsWith("/about") ||
           currentPath.startsWith("/contact") ||
           currentPath.startsWith("/faq") ||
