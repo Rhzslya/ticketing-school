@@ -46,4 +46,4 @@ prismaClient.$on("query", (e) => {
   // logger.error(e);
 });
 
-export { prisma };
+export { prismaClient as prisma };
