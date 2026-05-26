@@ -68,7 +68,8 @@ CLOUDINARY_API_SECRET="your_api_secret_here"`
 
 # VITE_API_URL
 
-`VITE_API_URL="https://schdesk.my.id/api"`
+`
+VITE_API_URL="https://schdesk.my.id/api"` // Replace with your domain
 
 # Google Gemini AI
 
