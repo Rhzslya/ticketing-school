@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15-alpine
@@ -7,9 +9,41 @@ services:
       POSTGRES_PASSWORD: PostgresPassword123
       POSTGRES_DB: school_tickets
     ports:
-      - "5433:5432" # Can change to default port 5432
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: school_tickets_server
+    environment:
+      # IMPORTANT: Database host is set to 'db', not localhost/127.0.0.1
+      - DATABASE_URL=postgresql://root:PostgresPassword123@db:5432/school_tickets?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    restart: unless-stopped
+    env_file:
+      - .env # Loads other environment variables from the .env file at the root
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: school_tickets_client
+    ports:
+      - "5173:80" # Access the web app at http://localhost:5173
+    depends_on:
+      - server
     restart: unless-stopped
 
 volumes:
