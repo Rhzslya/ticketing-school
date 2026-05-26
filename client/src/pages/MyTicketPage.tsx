@@ -445,7 +445,7 @@ export const MyTicketPage = () => {
             </div>
 
             <Link to="/tickets/create" className="block mt-4">
-              <Button className="w-full h-12 bg-[#f1c40f] hover:bg-[#f39c12] text-slate-900 font-bold shadow-lg shadow-black/10 rounded-xl transition-transform hover:scale-[1.02]">
+              <Button className="w-full h-12 bg-[#f1c40f] hover:bg-[#f39c12] text-slate-900 font-bold shadow-lg shadow-black/10 rounded-xl transition-transform hover:scale-[1.02] cursor-pointer">
                 <Plus className="mr-2 size-5" /> Create New Ticket
               </Button>
             </Link>
@@ -577,8 +577,8 @@ export const MyTicketPage = () => {
             ) : (
               <Link to="/tickets/create">
                 <Button
-                  variant="outline"
-                  className="border-primary text-primary hover:bg-primary/5"
+                  variant="secondary"
+                  className="cursor-pointer hover:text-white hover:bg-primary transition-colors"
                 >
                   Create a Ticket Now
                 </Button>
