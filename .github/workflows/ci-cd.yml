@@ -122,21 +122,14 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            # 1. Navigate to the main project directory on the server
+            # 1. Navigate to the project directory on the server
             cd ~/Seira/ticketing-app
 
             # 2. Pull the latest code updates
-            git pull origin main
+            git pull origin master
 
-            # 3. Run database migrations (Safe for Production)
-            cd server
-            bun install
-            bunx prisma generate
-            bunx prisma migrate deploy
-            cd ..
-
-            # 4. Rebuild images and start containers (Frontend & Backend)
+            # 3. Rebuild images and start containers (Frontend & Backend)
             docker compose up -d --build
 
-            # 5. Clean up unused/dangling Docker images
+            # 4. Clean up unused/dangling Docker images
             docker image prune -f
