@@ -41,7 +41,10 @@ services:
       dockerfile: Dockerfile
     container_name: school_tickets_client
     ports:
-      - "5173:80" # Access the web app at http://localhost:5173
+      - "80:80" # Access the web app at http://localhost:5173
+      - "443:443" # Access the web app at https://localhost:5173
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - server
     restart: unless-stopped
