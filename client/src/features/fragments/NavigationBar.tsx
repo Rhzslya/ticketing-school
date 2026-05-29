@@ -41,6 +41,7 @@ import { UserService } from "@/service/user-service";
 import { UserRole } from "@/enum/user";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.webp";
 
 const NavigationBar = () => {
   const navigate = useNavigate();
@@ -218,11 +219,15 @@ const NavigationBar = () => {
               className="w-[80vw] max-w-75 sm:max-w-sm flex flex-col p-0 bg-primary border-r-0"
             >
               <SheetHeader className="p-6 text-left border-b border-white/10 bg-primary">
-                <SheetTitle className="text-xl font-bold text-white tracking-tight">
+                <SheetTitle className="flex items-center gap-2 text-xl font-bold text-white tracking-tight">
+                  <img
+                    src={logo}
+                    alt="Helpdesk Logo"
+                    className="h-6 w-auto object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+                  />
                   Helpdesk
                 </SheetTitle>
               </SheetHeader>
-
               <div className="flex flex-col py-4 px-3 gap-2 flex-1">
                 <Button
                   variant="ghost"
@@ -281,7 +286,12 @@ const NavigationBar = () => {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src={logo}
+              alt="Helpdesk Logo"
+              className="h-7 w-auto md:h-8 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+            />
             <span className="font-extrabold text-lg md:text-xl text-white tracking-tight cursor-pointer whitespace-nowrap">
               Helpdesk
             </span>
