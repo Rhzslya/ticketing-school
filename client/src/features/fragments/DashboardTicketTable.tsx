@@ -46,7 +46,6 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import { TruncatedTooltip } from "@/components/utils/truncatedTooltip";
 import { getPriorityStyle, getStatusStyle } from "@/utils/get-style";
 
-// --- Framer Motion Animations ---
 const tableRowVariants: Variants = {
   hidden: { opacity: 0, scale: 0.98 },
   visible: {

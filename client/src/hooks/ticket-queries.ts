@@ -2,6 +2,7 @@ import { queryClient } from "@/lib/query-client";
 import { handleApiError } from "@/lib/utils";
 import type { ApiResponse } from "@/model/api-model";
 import type {
+  CreateTicketRequest,
   DeleteTicketRequest,
   DeleteTicketResponse,
   GetDetailedTicketRequest,
@@ -57,6 +58,18 @@ export const useTicketQueries = () => {
         staleTime: 1000 * 60,
       });
     },
+
+    createTicketMutation: useMutation({
+      mutationFn: (data: CreateTicketRequest): Promise<TicketResponse> =>
+        TicketService.create(data),
+      onSuccess: (result) => {
+        toast.success("Ticket Created", {
+          description: `Ticket ${result.id} created succesfully.`,
+        });
+        queryClient.invalidateQueries({ queryKey: TICKET_KEYS.lists() });
+      },
+      onError: (error) => handleApiError(error, "Failed to create ticket"),
+    }),
 
     updateTicketMutation: useMutation({
       mutationFn: (data: UpdateTicketRequest): Promise<TicketResponse> =>

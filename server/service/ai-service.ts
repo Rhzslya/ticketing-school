@@ -53,6 +53,7 @@ export class AiService {
       return JSON.parse(cleanJson);
     } catch (error) {
       // 5. Fault-Tolerance Fallback Strategy:
+      console.log(error);
       return { priority: Priority.LOW, category: TicketCategory.OTHERS };
     }
   }

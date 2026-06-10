@@ -9,34 +9,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Loader2,
-  AlertCircle,
-  Paperclip,
-  X,
-  Sparkles,
-  Info,
-} from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketValidation } from "@/validation/ticket-validation";
 import { TicketCategory, Priority } from "@/enum/ticket";
 import type { CreateTicketRequest } from "@/model/ticket-model";
-import { TicketService } from "@/service/ticket-service";
 import { isAxiosError } from "axios";
 import { getErrorMessage } from "@/lib/utils";
-import { ACCEPTED_IMAGE_TYPES } from "@/utils/image-type";
 import { AiService } from "@/service/ai-analyze-service";
+import { TicketClassificationFields } from "../fragments/TicketClassificationFields";
+import { TicketAttachmentInput } from "../fragments/TicketAttachmentInput";
+import { useTicketQueries } from "@/hooks/ticket-queries";
 
 const inputStyle =
   "bg-card-foreground border-muted text-background placeholder:text-muted-foreground focus-visible:ring-primary focus-visible:ring-1";
@@ -55,7 +43,9 @@ export const CreateTicketForm = ({
 }: CreateTicketFormProps = {}) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
+  const { createTicketMutation } = useTicketQueries();
+  const { mutateAsync: createTicket, isPending: isLoading } =
+    createTicketMutation;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -82,11 +72,10 @@ export const CreateTicketForm = ({
   const { isValid, isDirty } = form.formState;
 
   async function onSubmit(data: CreateTicketRequest) {
-    setIsLoading(true);
     setGlobalError(null);
 
     try {
-      await TicketService.create(data);
+      await createTicket(data);
       navigate("/tickets/my-tickets");
     } catch (error) {
       if (isAxiosError(error)) {
@@ -94,8 +83,6 @@ export const CreateTicketForm = ({
       } else {
         setGlobalError("A system error occurred. Please try again.");
       }
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -127,21 +114,6 @@ export const CreateTicketForm = ({
       setIsAnalyzing(false);
     }
   }
-
-  const categoryLabels: Record<TicketCategory, string> = {
-    [TicketCategory.NETWORK]: "Network & Internet",
-    [TicketCategory.HARDWARE]: "Hardware",
-    [TicketCategory.SOFTWARE]: "Software",
-    [TicketCategory.ELECTRICAL]: "Electrical",
-    [TicketCategory.FACILITIES]: "Facilities",
-    [TicketCategory.OTHERS]: "Others",
-  };
-
-  const priorityLabels: Record<Priority, string> = {
-    [Priority.HIGH]: "High",
-    [Priority.MEDIUM]: "Medium",
-    [Priority.LOW]: "Low",
-  };
 
   return (
     <div className="w-full">
@@ -272,170 +244,14 @@ export const CreateTicketForm = ({
                   <Loader2 className="size-6 animate-spin text-primary" />
                 </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-background/80 font-semibold">
-                        Category
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={`${inputStyle} h-11 sm:h-10 text-base sm:text-sm w-full text-left [&>span]:truncate`}
-                          >
-                            <SelectValue placeholder="Select category..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-card-foreground border-muted text-background">
-                          {Object.entries(categoryLabels).map(
-                            ([key, label]) => (
-                              <SelectItem
-                                key={key}
-                                value={key}
-                                className="focus:bg-muted focus:text-white cursor-pointer"
-                              >
-                                {label}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-background/80 font-semibold">
-                        Priority
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={`${inputStyle} h-11 sm:h-10 text-base sm:text-sm w-full text-left [&>span]:truncate`}
-                          >
-                            <SelectValue placeholder="Select priority..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-card-foreground border-muted text-background">
-                          {Object.entries(priorityLabels).map(
-                            ([key, label]) => (
-                              <SelectItem
-                                key={key}
-                                value={key}
-                                className="focus:bg-muted focus:text-foreground cursor-pointer"
-                              >
-                                {label}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <TicketClassificationFields
+                control={form.control}
+                disabled={isLoading}
+              />
             </div>
           </div>
 
-          <FormField
-            control={form.control}
-            name="attachments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-background/80 font-semibold">
-                  Attachments (Optional, Max 3 Photos)
-                </FormLabel>
-                <FormControl>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-muted text-foreground hover:bg-muted hover:text-foreground/70 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isLoading || (field.value?.length || 0) >= 3}
-                        onClick={() =>
-                          document.getElementById("file-upload")?.click()
-                        }
-                      >
-                        <Paperclip className="size-4 mr-2" /> Choose Image
-                      </Button>
-                      <span className="text-xs text-muted-foreground hidden sm:inline-block">
-                        Format: JPG, PNG, WEBP (Max 5MB)
-                      </span>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        multiple
-                        accept={ACCEPTED_IMAGE_TYPES.join(",")}
-                        className="hidden"
-                        onChange={(e) => {
-                          const selectedFiles = Array.from(
-                            e.target.files || [],
-                          );
-                          const currentFiles = field.value || [];
-                          const combinedFiles = [
-                            ...currentFiles,
-                            ...selectedFiles,
-                          ].slice(0, 3);
-                          field.onChange(combinedFiles);
-                          e.target.value = "";
-                        }}
-                      />
-                    </div>
-
-                    {field.value && field.value.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {field.value.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2.5 border border-muted/50 rounded-lg bg-card-foreground/50 shadow-sm"
-                          >
-                            <span
-                              className="text-xs text-background truncate max-w-37.5"
-                              title={file.name}
-                            >
-                              {file.name}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => {
-                                const newFiles = field.value!.filter(
-                                  (_, i) => i !== index,
-                                );
-                                field.onChange(newFiles);
-                              }}
-                              className="text-destructive hover:text-destructive/80 transition-colors p-1 rounded-full cursor-pointer"
-                            >
-                              <X className="size-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </FormControl>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
+          <TicketAttachmentInput control={form.control} disabled={isLoading} />
 
           <div className="pt-4 flex justify-end gap-3 border-t border-muted/50 mt-6">
             <Button

@@ -3,7 +3,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TicketValidation } from "@/validation/ticket-validation";
-import { Priority, TicketCategory, Status } from "@/enum/ticket";
+import { Status } from "@/enum/ticket";
 import type { TicketResponse, UpdateTicketRequest } from "@/model/ticket-model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,29 +16,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertCircle,
-  Info,
-  Loader2,
-  Paperclip,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { ACCEPTED_IMAGE_TYPES } from "@/utils/image-type";
+
+import { AlertCircle, Info, Loader2, Sparkles } from "lucide-react";
 import { useTicketQueries } from "@/hooks/ticket-queries";
 import { isAxiosError } from "axios";
 import { getErrorMessage } from "@/lib/utils";
 import { AiService } from "@/service/ai-analyze-service";
 import { motion, AnimatePresence } from "framer-motion";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { UserResponse } from "@/model/user-model";
+import { TicketClassificationFields } from "../fragments/TicketClassificationFields";
+import { TicketAttachmentInput } from "../fragments/TicketAttachmentInput";
 
 const inputStyle =
   "bg-card-foreground border-muted text-background placeholder:text-muted-foreground focus-visible:ring-primary focus-visible:ring-1 h-11 sm:h-10 text-base sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed";
@@ -56,7 +43,6 @@ export const UpdateTicketForm = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const [deleteAttachment, setDeleteAttachment] = useState(false);
 
   const isAdmin = currentUser.role === "ADMIN";
   const isCreator = String(currentUser.id) === String(ticket.submitterId);
@@ -101,7 +87,7 @@ export const UpdateTicketForm = ({
         payload.title = data.title;
         payload.description = data.description;
         payload.category = data.category;
-        payload.delete_attachment = deleteAttachment;
+        payload.delete_attachment = data.delete_attachment;
         if (data.attachments) payload.attachments = data.attachments;
       }
 
@@ -151,28 +137,6 @@ export const UpdateTicketForm = ({
       setIsAnalyzing(false);
     }
   }
-
-  const categoryLabels: Record<TicketCategory, string> = {
-    [TicketCategory.NETWORK]: "Network & Internet",
-    [TicketCategory.HARDWARE]: "Hardware",
-    [TicketCategory.SOFTWARE]: "Software",
-    [TicketCategory.ELECTRICAL]: "Electrical",
-    [TicketCategory.FACILITIES]: "Facilities",
-    [TicketCategory.OTHERS]: "Others",
-  };
-
-  const priorityLabels: Record<Priority, string> = {
-    [Priority.HIGH]: "High",
-    [Priority.MEDIUM]: "Medium",
-    [Priority.LOW]: "Low",
-  };
-
-  const statusLabels: Record<Status, string> = {
-    [Status.SUBMITTED]: "Submitted",
-    [Status.ONGOING]: "Ongoing",
-    [Status.DONE]: "Done",
-    [Status.REJECTED]: "Rejected",
-  };
 
   return (
     <div className="w-full">
@@ -276,242 +240,21 @@ export const UpdateTicketForm = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-background/80 font-semibold">
-                        Status
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading || isStatusDisabled}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={`${inputStyle} h-11 sm:h-10 text-base sm:text-sm w-full text-left [&>span]:truncate`}
-                          >
-                            <SelectValue placeholder="Select status..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(statusLabels).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                {/* 2. CATEGORY */}
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-background/80 font-semibold">
-                        Category
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading || isContentDisabled}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={`${inputStyle} h-11 sm:h-10 text-base sm:text-sm w-full text-left [&>span]:truncate`}
-                          >
-                            <SelectValue placeholder="Select category..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(categoryLabels).map(
-                            ([key, label]) => (
-                              <SelectItem key={key} value={key}>
-                                {label}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                {/* 3. PRIORITY */}
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-background/80 font-semibold">
-                        Priority
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading || isPriorityDisabled}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            className={`${inputStyle} h-11 sm:h-10 text-base sm:text-sm w-full text-left [&>span]:truncate`}
-                          >
-                            <SelectValue placeholder="Select priority..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(priorityLabels).map(
-                            ([key, label]) => (
-                              <SelectItem key={key} value={key}>
-                                {label}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <TicketClassificationFields
+                control={form.control}
+                disabled={isLoading}
+                showStatus={true}
+                statusDisabled={isStatusDisabled}
+                categoryDisabled={isContentDisabled}
+                priorityDisabled={isPriorityDisabled}
+              />
             </div>
           </div>
 
-          {/* Bagian Attachment hanya aktif jika User adalah Creator & tiket masih SUBMITTED */}
-          <div
-            className={`space-y-4 ${isContentDisabled ? "opacity-50 pointer-events-none" : ""}`}
-          >
-            {ticket.attachment_url && ticket.attachment_url.length > 0 && (
-              <div className="space-y-3 pt-4">
-                <FormLabel className="text-background/80 font-semibold">
-                  Current Attachments
-                </FormLabel>
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-card-foreground/50 border border-muted/50 p-4 rounded-xl">
-                  <div
-                    className={`flex gap-3 transition-opacity ${deleteAttachment ? "opacity-30 grayscale" : ""}`}
-                  >
-                    {ticket.attachment_url.map((url, idx) => (
-                      <div
-                        key={idx}
-                        className="relative size-16 sm:size-20 rounded-lg overflow-hidden border border-muted"
-                      >
-                        <img
-                          src={url}
-                          alt="Attachment"
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="sm:ml-auto">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="delete_old_attachments"
-                        checked={deleteAttachment}
-                        onCheckedChange={(checked) => {
-                          setDeleteAttachment(checked === true);
-                          form.setValue("delete_attachment", checked === true, {
-                            shouldDirty: true,
-                          });
-                        }}
-                        disabled={isLoading || isContentDisabled}
-                      />
-                      <label
-                        htmlFor="delete_old_attachments"
-                        className="text-sm font-medium text-destructive"
-                      >
-                        Remove Existing Attachments
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <FormField
-              control={form.control}
-              name="attachments"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-background/80 font-semibold">
-                    Add New Attachments (Max 3)
-                  </FormLabel>
-                  <FormControl>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={
-                            isLoading ||
-                            (field.value?.length || 0) >= 3 ||
-                            isContentDisabled
-                          }
-                          onClick={() =>
-                            document
-                              .getElementById("update-file-upload")
-                              ?.click()
-                          }
-                        >
-                          <Paperclip className="size-4 mr-2" /> Choose Image
-                        </Button>
-                        <input
-                          id="update-file-upload"
-                          type="file"
-                          multiple
-                          accept={ACCEPTED_IMAGE_TYPES.join(",")}
-                          className="hidden"
-                          onChange={(e) => {
-                            const newFiles = Array.from(e.target.files || []);
-                            field.onChange(
-                              [...(field.value || []), ...newFiles].slice(0, 3),
-                            );
-                            e.target.value = "";
-                          }}
-                        />
-                      </div>
-
-                      {field.value && field.value.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {field.value.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex justify-between p-2.5 border rounded-lg"
-                            >
-                              <span className="text-xs truncate">
-                                {file.name}
-                              </span>
-                              <button
-                                type="button"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  field.onChange(
-                                    field.value!.filter((_, i) => i !== index),
-                                  )
-                                }
-                                className="text-destructive p-1"
-                              >
-                                <X className="size-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-
+          <TicketAttachmentInput
+            control={form.control}
+            disabled={isLoading || isContentDisabled}
+          />
           <div className="pt-4 flex justify-end gap-3 border-t mt-6">
             <Button
               type="button"
