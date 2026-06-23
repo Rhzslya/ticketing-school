@@ -15,12 +15,7 @@ const LoginPage = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.5 }}
         className="w-full text-center mt-8 pb-4"
-      >
-        {/* <p className="text-xs sm:text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Sinari Cell.{" "}
-          {t("auth.common.copyright")}
-        </p> */}
-      </motion.div>
+      ></motion.div>
     </div>
   );
 };
