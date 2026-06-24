@@ -124,7 +124,11 @@ export function DashboardTicketTable({
 
   if (tickets.length === 0) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="h-full"
+      >
         <NotFoundPage
           variant="minimal"
           isDashboard={true}
@@ -134,8 +138,6 @@ export function DashboardTicketTable({
       </motion.div>
     );
   }
-
-  console.log(tickets);
 
   return (
     <>
